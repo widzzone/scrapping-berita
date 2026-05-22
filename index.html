@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.zingchart.com/zingchart.min.js"></script>
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    .loader { border-top-color: #3b82f6; animation: spinner 1s linear infinite; }
+    @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .tab-active { border-bottom: 3px solid #7c3aed; color: #7c3aed; font-weight: 800; }
+    .tab-inactive { color: #64748b; font-weight: 600; }
+    .tab-inactive:hover { color: #475569; background-color: #f1f5f9; border-radius: 8px 8px 0 0; }
+    .archive-card:hover { transform: translateY(-2px); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); transition: all 0.2s ease-in-out; }
+  </style>
+</head>
+<body class="p-4 md:p-8 text-slate-800">
+  <div class="max-w-7xl mx-auto">
+    
+    <div class="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-6">
+      <div>
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-100 text-violet-700 text-[10px] font-bold tracking-widest uppercase mb-3">
+          <span class="w-2 h-2 rounded-full bg-violet-500 animate-pulse"></span>Prestige UI Core V22.1
+        </div>
+        <h1 class="text-3xl md:text-5xl font-extrabold tracking-tight text-slate-900">
+          Executive <span class="text-violet-600">Intelligence OS</span>
+        </h1>
+        <p class="text-sm text-slate-500 font-medium mt-2">Platform Analisis Sentimen Multi-Sumber & Gudang Arsip Pengetahuan</p>
+      </div>
+    </div>
+
+    <div class="flex gap-8 border-b border-slate-200 mb-8 px-2 overflow-x-auto whitespace-nowrap">
+      <button onclick="switchTab('tab-news')" id="btn-tab-news" class="pb-4 px-2 tab-active transition-all text-sm">
+        📰 News Analyzer
+      </button>
+      <button onclick="switchTab('tab-trends')" id="btn-tab-trends" class="pb-4 px-2 tab-inactive transition-all text-sm">
+        🔥 Trending Now (Live)
+      </button>
+      <button onclick="switchTab('tab-topwords')" id="btn-tab-topwords" class="pb-4 px-2 tab-inactive transition-all text-sm">
+        ☁️ Top Words Radar (NLP)
+      </button>
+      <button onclick="switchTab('tab-archive')" id="btn-tab-archive" class="pb-4 px-2 tab-inactive transition-all text-sm">
+        📁 Archive Repository
+      </button>
+    </div>
+
+    <div id="tab-news" class="block">
+      
+      <div class="bg-white p-6 lg:p-8 rounded-[2rem] shadow-sm border border-slate-200 mb-8 relative overflow-hidden">
+        <div class="absolute top-0 right-0 w-64 h-64 bg-violet-50 rounded-full blur-3xl -z-10 -translate-y-1/2 translate-x-1/3"></div>
+
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-5 relative z-10">
+          <div class="md:col-span-3 flex flex-col gap-2">
+            <label class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">🌐 Sumber Berita</label>
+            <select id="newsSource" class="w-full px-4 py-3.5 bg-slate-50 rounded-2xl focus:ring-2 focus:ring-violet-200 focus:bg-white text-sm font-bold text-slate-800 outline-none border border-slate-100 transition-all cursor-pointer shadow-inner">
+              <option value="detik">Detik.com</option>
+              <option value="antara">Antara News</option>
+            </select>
+          </div>
+
+          <div class="md:col-span-6 flex flex-col gap-2">
+            <label class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">🎯 Kata Kunci Utama</label>
+            <input type="text" id="keyword" placeholder="Contoh: Pramono Anung, Pilkada, IHSG..." class="w-full px-5 py-3.5 bg-slate-50 rounded-2xl focus:ring-2 focus:ring-violet-200 focus:bg-white text-sm font-semibold outline-none border border-slate-100 transition-all placeholder-slate-400 shadow-inner">
+          </div>
+
+          <div class="md:col-span-3 flex flex-col gap-2">
+            <label class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">📚 Kedalaman (Hal)</label>
+            <div class="flex items-center bg-slate-50 border border-slate-100 rounded-2xl px-5 py-3.5 focus-within:ring-2 focus-within:ring-violet-200 focus-within:bg-white transition-all shadow-inner">
+               <span class="text-xs font-extrabold text-slate-400 mr-3">HAL:</span>
+               <input type="number" id="pages" value="1" min="1" max="15" class="w-full bg-transparent text-sm font-bold text-slate-800 outline-none text-left">
+            </div>
+          </div>
+        </div>
+
+        <hr class="border-slate-100 my-6">
+
+        <div class="flex flex-col lg:flex-row items-end lg:items-center justify-between gap-6 relative z-10">
+          
+          <div class="flex flex-wrap items-center gap-4 w-full lg:w-auto">
+            <div class="flex flex-col gap-2">
+               <label class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">Mulai Tanggal</label>
+               <input type="date" id="startDate" class="px-4 py-3 bg-slate-50 rounded-xl text-xs font-bold text-slate-600 outline-none border border-slate-100 focus:ring-2 focus:ring-violet-200 transition-all cursor-pointer">
+            </div>
+            <div class="flex flex-col gap-2">
+               <label class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">Sampai Tanggal</label>
+               <input type="date" id="endDate" class="px-4 py-3 bg-slate-50 rounded-xl text-xs font-bold text-slate-600 outline-none border border-slate-100 focus:ring-2 focus:ring-violet-200 transition-all cursor-pointer">
+            </div>
+          </div>
+
+          <div class="flex flex-wrap lg:flex-nowrap items-center gap-3 w-full lg:w-auto">
+            <button onclick="clearDashboard()" class="bg-rose-50 hover:bg-rose-100 text-rose-600 p-3.5 rounded-xl transition-all shadow-sm flex-shrink-0 border border-rose-100" title="Bersihkan Layar">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+            </button>
+            
+            <button onclick="pingTotal()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-sm font-extrabold py-3.5 px-6 rounded-xl transition-all shadow-sm flex flex-1 justify-center lg:flex-none items-center gap-2 border border-indigo-100">
+              🔍 Intip Total Berita
+            </button>
+
+            <button onclick="startScraping()" id="btnSearch" class="bg-slate-900 hover:bg-violet-600 text-white text-sm font-bold py-3.5 px-8 rounded-xl transition-all shadow-md flex flex-1 justify-center lg:flex-none items-center gap-2">
+              ⚡ Mulai Ekstraksi AI
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div id="summaryBadge" class="hidden mb-6 bg-gradient-to-r from-indigo-50 to-violet-50 border border-indigo-100/50 p-5 rounded-2xl flex items-center justify-between shadow-sm transition-all">
+        <div class="flex items-center gap-4">
+          <div class="bg-white p-3 rounded-xl shadow-sm text-xl border border-indigo-50">📊</div>
+          <div>
+            <p class="text-[10px] text-indigo-500 font-extrabold uppercase tracking-widest">Sistem Rekapitulasi Otomatis</p>
+            <p id="summaryText" class="text-sm md:text-base text-indigo-950 font-medium mt-1 leading-relaxed">Menghitung data...</p>
+          </div>
+        </div>
+      </div>
+
+      <div id="loader" class="hidden flex-col items-center justify-center py-12 mb-8 bg-white/60 backdrop-blur-md rounded-3xl border border-blue-50 shadow-inner">
+        <div class="loader rounded-full border-4 border-slate-200 h-12 w-12 mb-4"></div>
+        <p class="text-sm text-blue-600 font-extrabold tracking-wide animate-pulse" id="loadingText">Menyelaraskan koneksi data...</p>
+      </div>
+
+      <div id="tableContainer" class="hidden bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden mb-12">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-slate-50 border-b border-slate-200">
+              <th class="py-5 px-6 text-xs font-extrabold text-slate-400 uppercase tracking-widest w-32">Visual</th>
+              <th class="py-5 px-6 text-xs font-extrabold text-slate-400 uppercase tracking-widest">Kompilasi Analisis Multi-Source LLM</th>
+            </tr>
+          </thead>
+          <tbody id="resultsTable" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="tab-trends" class="hidden">
+      <div class="flex items-center justify-between mb-6">
+        <h2 class="text-2xl font-extrabold text-slate-800 tracking-tight">Topik Nasional Terpanas</h2>
+        <button onclick="loadTrends()" id="btnRefreshTrends" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2.5 rounded-xl font-bold transition-all shadow-sm">
+          🔄 Segarkan Radar
+        </button>
+      </div>
+      
+      <div id="loaderTrends" class="hidden flex-col items-center justify-center py-32 bg-white rounded-3xl shadow-sm border border-slate-200">
+        <div class="loader rounded-full border-4 border-slate-200 h-12 w-12 mb-4"></div>
+        <p class="text-sm text-slate-500 font-bold animate-pulse">Menghubungkan ke API Berita Nasional...</p>
+      </div>
+
+      <div id="trendsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+    </div>
+
+    <div id="tab-topwords" class="hidden">
+      <div class="flex items-center justify-between mb-6">
+        <h2 class="text-2xl font-extrabold text-slate-800 tracking-tight">Peta Kata Kunci Eksekutif (Text Mining)</h2>
+        <button onclick="loadTopWords()" id="btnRefreshWords" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2.5 rounded-xl font-bold transition-all shadow-sm">
+          🔄 Ekstrak Ulang
+        </button>
+      </div>
+
+      <div id="loaderWords" class="hidden flex-col items-center justify-center py-32 bg-white rounded-[2rem] shadow-sm border border-slate-200">
+        <div class="loader rounded-full border-4 border-slate-200 h-12 w-12 mb-4"></div>
+        <p class="text-sm text-slate-500 font-bold animate-pulse">Menambang miliaran teks untuk visualisasi NLP...</p>
+      </div>
+
+      <div id="wordcloud-container" class="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-200 hidden h-[600px]">
+         <div id="wordcloud-chart" class="w-full h-full"></div>
+      </div>
+    </div>
+
+    <div id="tab-archive" class="hidden">
+      <div class="bg-white p-6 lg:p-8 rounded-[2rem] shadow-sm border border-slate-200 mb-8 flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-64 h-64 bg-violet-50 rounded-full blur-3xl -z-10 -translate-y-1/2 -translate-x-1/3"></div>
+        <div class="relative z-10">
+          <h2 class="text-2xl font-extrabold text-slate-800 tracking-tight">Knowledge Archive Vault</h2>
+          <p class="text-sm text-slate-500 font-medium mt-1">Histori intelijen yang tersimpan di Google Sheets Database Anda.</p>
+        </div>
+        <div class="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto relative z-10">
+          <input type="text" id="archiveSearch" onkeyup="filterArchive()" placeholder="Cari di arsip..." class="w-full sm:w-64 px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-semibold outline-none focus:ring-2 focus:ring-violet-200 transition-all shadow-inner">
+          <button onclick="loadArchive()" class="bg-slate-900 hover:bg-violet-600 text-white px-6 py-3.5 rounded-2xl text-sm font-bold shadow-md transition-all whitespace-nowrap flex items-center gap-2">
+            🔄 Sinkronisasi Data
+          </button>
+        </div>
+      </div>
+      
+      <div id="loaderArchive" class="hidden flex-col items-center justify-center py-20 bg-white/60 backdrop-blur-md rounded-3xl border border-slate-50 shadow-inner mb-8">
+        <div class="loader rounded-full border-4 border-slate-200 h-12 w-12 mb-4"></div>
+        <p class="text-sm text-blue-600 font-extrabold tracking-wide animate-pulse">Menarik data dari brankas Spreadsheet...</p>
+      </div>
+      
+      <div id="archiveContainer" class="grid grid-cols-1 lg:grid-cols-2 gap-6"></div>
+    </div>
+
+  </div>
+
+  <script>
+    function switchTab(tabId) {
+      document.getElementById('tab-news').classList.add('hidden');
+      document.getElementById('tab-trends').classList.add('hidden');
+      document.getElementById('tab-topwords').classList.add('hidden');
+      document.getElementById('tab-archive').classList.add('hidden');
+      
+      document.getElementById(tabId).classList.remove('hidden');
+
+      document.getElementById('btn-tab-news').className = "pb-4 px-2 tab-inactive transition-all text-sm";
+      document.getElementById('btn-tab-trends').className = "pb-4 px-2 tab-inactive transition-all text-sm";
+      document.getElementById('btn-tab-topwords').className = "pb-4 px-2 tab-inactive transition-all text-sm";
+      document.getElementById('btn-tab-archive').className = "pb-4 px-2 tab-inactive transition-all text-sm";
+      
+      document.getElementById('btn-' + tabId).className = "pb-4 px-2 tab-active transition-all text-sm";
+
+      if(tabId === 'tab-trends' && document.getElementById('trendsContainer').innerHTML === '') loadTrends();
+      if(tabId === 'tab-topwords' && document.getElementById('wordcloud-chart').innerHTML === '') loadTopWords();
+      if(tabId === 'tab-archive' && document.getElementById('archiveContainer').innerHTML === '') loadArchive();
+    }
+// 🛑 WIDZZONE API CONNECTOR (VERCEL TO GOOGLE) 🛑
+    // GANTI TAUTAN DI BAWAH DENGAN URL WEB APP GOOGLE APPS SCRIPT ANDA!
+    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbxndY-ziPHMnid16939BjFzjbuDN3tqON5r3Ugm7oQuXuyYDTFZP261amlDq6Lm8nYB/exec";
+
+    async function callGoogleAPI(action, payload = {}) {
+        payload.action = action;
+        try {
+            // Menggunakan method POST dan text/plain untuk membypass sekuriti CORS browser
+            const response = await fetch(GAS_API_URL, {
+                method: "POST",
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify(payload)
+            });
+            const json = await response.json();
+            if (json.status === "error") throw new Error(json.message);
+            return json.data;
+        } catch (error) {
+            throw error;
+        }
+    }
+    // --- ARCHIVE LOGIC (BARU) ---
+    async function loadArchive() {
+      const loader = document.getElementById('loaderArchive');
+      const container = document.getElementById('archiveContainer');
+      container.innerHTML = ''; loader.classList.replace('hidden', 'flex');
+      
+      try {
+        const data = await callGoogleAPI("getArchivedData");
+        loader.classList.replace('flex', 'hidden');
+        if (data.length === 0) { 
+            container.innerHTML = '<div class="col-span-full text-center py-20 text-slate-400 font-semibold">Database kosong.</div>'; return; 
+        }
+        data.forEach(item => {
+          let sColor = item.sentimen === "Positif" ? "emerald" : (item.sentimen === "Negatif" ? "rose" : "slate");
+          container.innerHTML += `
+            <div class="archive-card bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex flex-col gap-4 archive-item">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="px-3 py-1 rounded-lg bg-slate-900 text-white text-[10px] font-bold uppercase tracking-widest">${item.sumber || 'DB'}</span>
+                <span class="px-3 py-1 rounded-lg text-[10px] font-bold bg-${sColor}-100 text-${sColor}-700 border border-${sColor}-200 uppercase tracking-widest">${item.sentimen}</span>
+                <span class="text-[10px] font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-lg border border-slate-200">🕒 ${item.timestamp}</span>
+              </div>
+              <h3 class="text-lg font-extrabold text-slate-800 leading-snug">${item.judul_berita}</h3>
+              <div class="bg-slate-50 p-4 rounded-xl border-l-4 border-${sColor}-400">
+                  <p class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1">🔍 Keyword: ${item.keyword}</p>
+                  <p class="text-sm text-slate-700 font-medium italic">"${item.alasan_ai}"</p>
+              </div>
+              <div class="mt-auto pt-2 flex justify-between items-center">
+                <a href="${item.url_artikel}" target="_blank" class="text-xs text-violet-600 font-extrabold hover:text-violet-800 transition-colors flex items-center gap-1">Baca Jurnal Asli &rarr;</a>
+              </div>
+            </div>`;
+        });
+      } catch (err) {
+        loader.classList.replace('flex', 'hidden');
+        alert("Gagal memuat arsip: " + err.message);
+      }
+    }
+
+    function filterArchive() {
+      let input = document.getElementById('archiveSearch').value.toLowerCase();
+      let items = document.getElementsByClassName('archive-item');
+      Array.from(items).forEach(item => { 
+          item.style.display = item.innerText.toLowerCase().includes(input) ? "flex" : "none"; 
+      });
+    }
+
+    // --- LOGIKA ASLI SEBELUMNYA (TIDAK ADA YANG BERUBAH) ---
+    function analyzeTrend(keyword) {
+       switchTab('tab-news'); 
+       document.getElementById('keyword').value = keyword; 
+       document.getElementById('pages').value = 1; 
+       document.getElementById('startDate').value = ''; 
+       document.getElementById('endDate').value = ''; 
+       startScraping(); 
+    }
+
+    async function loadTopWords() {
+      const loader = document.getElementById('loaderWords');
+      const container = document.getElementById('wordcloud-container');
+      const btn = document.getElementById('btnRefreshWords');
+      container.classList.add('hidden'); loader.classList.replace('hidden', 'flex');
+      btn.disabled = true; btn.innerText = 'Menambang...';
+
+      try {
+        const wordsData = await callGoogleAPI("getTopWords");
+        loader.classList.replace('flex', 'hidden');
+        container.classList.remove('hidden');
+        btn.disabled = false; btn.innerText = '🔄 Ekstrak Ulang';
+        renderWordCloud(wordsData);
+      } catch (err) {
+        loader.classList.replace('flex', 'hidden');
+        btn.disabled = false; btn.innerText = '🔄 Coba Lagi';
+        alert("Gagal menambang kata: " + err.message);
+      }
+    }
+
+    function renderWordCloud(wordsData) {
+       let chartConfig = {
+          type: 'wordcloud',
+          options: {
+             words: wordsData, minLength: 4, ignore: [""],
+             style: {
+                fontFamily: 'Plus Jakarta Sans',
+                hoverState: { backgroundColor: '#f1f5f9', fontColor: '#0f172a', borderRadius: 6, padding: '6px' },
+                tooltip: { text: 'Terdeteksi "%text" sebanyak %hits kali', visible: true, alpha: 0.95, backgroundColor: '#0f172a', borderRadius: 8, padding: '10px' }
+             }
+          }
+       };
+       zingchart.render({ id: 'wordcloud-chart', data: chartConfig, height: '100%', width: '100%' });
+       zingchart.bind('wordcloud-chart', 'node_click', function(p) { analyzeTrend(p.text); });
+    }
+
+    async function loadTrends() {
+      const container = document.getElementById('trendsContainer');
+      const loader = document.getElementById('loaderTrends');
+      const btn = document.getElementById('btnRefreshTrends');
+      container.innerHTML = ''; loader.classList.replace('hidden', 'flex');
+      btn.disabled = true; btn.innerText = 'Memuat...';
+
+      try {
+        const data = await callGoogleAPI("fetchGoogleTrends");
+        loader.classList.replace('flex', 'hidden');
+        btn.disabled = false; btn.innerText = '🔄 Segarkan Radar';
+        if(data && data.length > 0) {
+             data.forEach((trend, index) => {
+                 let rankBadge = index === 0 ? 'bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-md' : 'bg-slate-100 text-slate-500 border border-slate-200';
+                 container.innerHTML += `
+                  <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col gap-5 cursor-default">
+                    <div class="flex justify-between items-start">
+                      <span class="inline-flex items-center justify-center w-10 h-10 rounded-xl ${rankBadge} font-extrabold text-sm">${index + 1}</span>
+                      <span class="bg-emerald-50 text-emerald-600 border border-emerald-100 text-[10px] font-extrabold px-3 py-1.5 rounded-lg uppercase tracking-wider">${trend.traffic}</span>
+                    </div>
+                    <h3 class="text-xl font-extrabold text-slate-800 leading-snug">${trend.keyword}</h3>
+                    <div class="flex gap-4">
+                      <div class="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-slate-100 shadow-inner"><img src="${trend.image}" class="w-full h-full object-cover"></div>
+                      <div class="flex-1 flex flex-col justify-center">
+                        <p class="text-xs text-slate-600 font-semibold line-clamp-2">${trend.relatedNews}</p>
+                        <p class="text-[10px] text-slate-400 font-extrabold mt-1.5 uppercase tracking-wider">🕒 ${trend.date}</p>
+                      </div>
+                    </div>
+                    <button onclick="analyzeTrend('${trend.keyword.replace(/'/g, "\\'")}')" class="mt-auto w-full bg-slate-50 hover:bg-slate-900 text-slate-700 hover:text-white border border-slate-200 text-sm font-bold py-3.5 rounded-xl transition-all shadow-sm">
+                      ⚡ Ekstrak Sentimen AI
+                    </button>
+                  </div>`;
+             });
+        }
+      } catch (err) {
+        loader.classList.replace('flex', 'hidden');
+        btn.disabled = false; btn.innerText = '🔄 Coba Lagi';
+        alert("Gagal memuat tren: " + err.message);
+      }
+    }
+
+    function clearDashboard() {
+        document.getElementById('resultsTable').innerHTML = '';
+        document.getElementById('tableContainer').classList.add('hidden');
+        document.getElementById('summaryBadge').classList.add('hidden');
+    }
+
+    function formatDateIndo(dateStr) {
+        if (!dateStr) return "";
+        const parts = dateStr.split('-');
+        const bulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+        return `${parts[2]} ${bulan[parseInt(parts[1])-1]} ${parts[0]}`;
+    }
+
+    async function pingTotal() {
+        const keyword = document.getElementById('keyword').value;
+        const source = document.getElementById('newsSource').value;
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
+        const sourceName = document.getElementById('newsSource').options[document.getElementById('newsSource').selectedIndex].text;
+
+        if (!keyword) return alert("Mohon masukkan kata kunci untuk diintip!");
+
+        document.getElementById('loadingText').innerText = `Radar mengintip total data di server ${sourceName}...`;
+        document.getElementById('loader').classList.replace('hidden', 'flex');
+
+        try {
+            const data = await callGoogleAPI("checkTotalNews", { keyword, source, startDate, endDate });
+            document.getElementById('loader').classList.replace('flex', 'hidden');
+            const badge = document.getElementById('summaryBadge');
+            const summaryText = document.getElementById('summaryText');
+
+            summaryText.innerHTML = `Radar Pengintai menemukan <span class="font-extrabold text-indigo-600 mx-1 bg-indigo-100 px-2 py-0.5 rounded-lg">${data.total}</span> terkait "<span class="font-bold">${keyword}</span>" di portal ${sourceName}. <br><span class="text-xs text-indigo-400 font-bold mt-2 block tracking-wide">💡 Silakan isi angka HAL (Kedalaman) dan klik "Mulai Ekstraksi AI" untuk menyedot sentimennya.</span>`;
+            badge.classList.remove('hidden');
+        } catch (err) {
+            document.getElementById('loader').classList.replace('flex', 'hidden');
+            alert("Gagal memindai: " + err.message);
+        }
+    }
+
+    async function startScraping() {
+      const keyword = document.getElementById('keyword').value;
+      const pages = document.getElementById('pages').value;
+      const source = document.getElementById('newsSource').value;
+      const startDate = document.getElementById('startDate').value; 
+      const endDate = document.getElementById('endDate').value; 
+      const sourceName = document.getElementById('newsSource').options[document.getElementById('newsSource').selectedIndex].text;
+      const btn = document.getElementById('btnSearch');
+      
+      if (!keyword) return alert("Mohon masukkan kata kunci!");
+
+      document.getElementById('loadingText').innerText = `Memindai & mengekstrak presisi dari ${sourceName} ke dashboard...`;
+      document.getElementById('loader').classList.replace('hidden', 'flex');
+      btn.disabled = true; btn.innerHTML = 'Memproses...'; btn.classList.add('opacity-75');
+
+      try {
+        const data = await callGoogleAPI("fetchNews", { keyword, pages, source, startDate, endDate });
+        document.getElementById('loader').classList.replace('flex', 'hidden');
+        btn.disabled = false; btn.innerHTML = '⚡ Mulai Ekstraksi AI'; btn.classList.remove('opacity-75');
+        
+        if(data && data.length > 0) { 
+            displayResults(data); 
+            updateSummaryBadge(keyword, startDate, endDate); 
+        } else {
+            document.getElementById('tableContainer').classList.remove('hidden');
+            document.getElementById('resultsTable').innerHTML += `
+              <tr class="bg-slate-50/50">
+                <td colspan="2" class="py-10 text-center text-slate-500 font-semibold text-sm">
+                  ⚠️ Tidak ada data yang sesuai dengan rentang waktu Anda di ${sourceName} (Kedalaman ${pages} Halaman). <br>Coba naikkan angka HAL untuk mencari lebih dalam.
+                </td>
+              </tr>`;
+        }
+      } catch (err) {
+        document.getElementById('loader').classList.replace('flex', 'hidden');
+        btn.disabled = false; btn.innerHTML = 'Coba Lagi'; btn.classList.remove('opacity-75');
+        alert("Terjadi kesalahan sistem: " + err.message);
+      }
+    }
+
+    function updateSummaryBadge(keyword, startDate, endDate) {
+       const badge = document.getElementById('summaryBadge');
+       const summaryText = document.getElementById('summaryText');
+       const totalBerita = document.getElementById('resultsTable').children.length;
+       
+       let dateInfo = "sepanjang waktu pencarian";
+       if (startDate && endDate) dateInfo = `rentang <b class="text-indigo-800">${formatDateIndo(startDate)}</b> s/d <b class="text-indigo-800">${formatDateIndo(endDate)}</b>`;
+       else if (startDate) dateInfo = `sejak <b class="text-indigo-800">${formatDateIndo(startDate)}</b>`;
+       else if (endDate) dateInfo = `hingga <b class="text-indigo-800">${formatDateIndo(endDate)}</b>`;
+
+       summaryText.innerHTML = `Mesin Intelijen AI berhasil menghimpun <span class="font-extrabold text-indigo-600 bg-indigo-100 px-2 py-0.5 rounded-lg mx-1">${totalBerita} berita presisi</span> mengenai "<span class="font-bold">${keyword}</span>" untuk ${dateInfo}.`;
+       badge.classList.remove('hidden');
+    }
+
+    function displayResults(data) {
+      document.getElementById('tableContainer').classList.remove('hidden');
+      const resultsTable = document.getElementById('resultsTable');
+      
+      data.forEach((news) => {
+        const imgSrc = news.image ? news.image : 'https://placehold.co/400x300';
+        let badgeColor = news.sentiment.color; 
+        let sourceColor = news.source === 'DETIK' ? 'blue' : 'orange';
+        
+        resultsTable.innerHTML += `
+          <tr class="hover:bg-slate-50/80 transition-colors border-b border-slate-100 group">
+            <td class="py-6 px-6 align-top">
+              <div class="w-32 h-20 rounded-xl overflow-hidden border border-slate-200 shadow-sm group-hover:shadow-md transition-all"><img src="${imgSrc}" class="w-full h-full object-cover"></div>
+            </td>
+            <td class="py-6 px-6 align-top">
+              <div class="flex flex-col gap-3">
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-extrabold uppercase tracking-widest bg-${sourceColor}-600 text-white shadow-sm">📰 ${news.source}</span>
+                  <span class="inline-flex items-center px-3 py-1 rounded-md text-[10px] font-extrabold uppercase tracking-widest bg-${badgeColor}-100 text-${badgeColor}-700 border border-${badgeColor}-200">${news.sentiment.status}</span>
+                  <span class="text-[10px] font-extrabold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200 tracking-wider">🕒 ${news.rawDate}</span>
+                </div>
+                <h3 class="text-lg font-extrabold text-slate-900 leading-snug group-hover:text-violet-700 transition-colors">${news.title}</h3>
+                <div class="bg-slate-50/80 border-l-4 border-${badgeColor}-400 p-4 rounded-r-xl mt-1 shadow-inner">
+                  <p class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1.5 flex items-center gap-1">🧠 Kesimpulan AI Gemini 2.5</p>
+                  <p class="text-sm text-slate-700 font-medium leading-relaxed">"${news.sentiment.reason}"</p>
+                </div>
+                <a href="${news.link}" target="_blank" class="text-xs text-violet-600 font-extrabold hover:text-violet-800 transition-colors mt-2 w-max flex items-center gap-1">Baca Jurnal Asli <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd" /></svg></a>
+              </div>
+            </td>
+          </tr>
+        `;
+      });
+    }
+  </script>
+</body>
+</html>
