@@ -39,9 +39,6 @@
       <button onclick="switchTab('tab-trends')" id="btn-tab-trends" class="pb-4 px-2 tab-inactive transition-all text-sm">
         🔥 Trending Now (Live)
       </button>
-      <button onclick="switchTab('tab-topwords')" id="btn-tab-topwords" class="pb-4 px-2 tab-inactive transition-all text-sm">
-        ☁️ Top Words Radar (NLP)
-      </button>
       <button onclick="switchTab('tab-archive')" id="btn-tab-archive" class="pb-4 px-2 tab-inactive transition-all text-sm">
         📁 Archive Repository
       </button>
@@ -150,14 +147,6 @@
       <div id="trendsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
     </div>
 
-    <div id="tab-topwords" class="hidden">
-      <div class="flex items-center justify-between mb-6">
-        <h2 class="text-2xl font-extrabold text-slate-800 tracking-tight">Peta Kata Kunci Eksekutif (Text Mining)</h2>
-        <button onclick="loadTopWords()" id="btnRefreshWords" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2.5 rounded-xl font-bold transition-all shadow-sm">
-          🔄 Ekstrak Ulang
-        </button>
-      </div>
-
       <div id="loaderWords" class="hidden flex-col items-center justify-center py-32 bg-white rounded-[2rem] shadow-sm border border-slate-200">
         <div class="loader rounded-full border-4 border-slate-200 h-12 w-12 mb-4"></div>
         <p class="text-sm text-slate-500 font-bold animate-pulse">Menambang miliaran teks untuk visualisasi NLP...</p>
@@ -197,54 +186,36 @@
     function switchTab(tabId) {
       document.getElementById('tab-news').classList.add('hidden');
       document.getElementById('tab-trends').classList.add('hidden');
-      document.getElementById('tab-topwords').classList.add('hidden');
       document.getElementById('tab-archive').classList.add('hidden');
       
       document.getElementById(tabId).classList.remove('hidden');
 
       document.getElementById('btn-tab-news').className = "pb-4 px-2 tab-inactive transition-all text-sm";
       document.getElementById('btn-tab-trends').className = "pb-4 px-2 tab-inactive transition-all text-sm";
-      document.getElementById('btn-tab-topwords').className = "pb-4 px-2 tab-inactive transition-all text-sm";
       document.getElementById('btn-tab-archive').className = "pb-4 px-2 tab-inactive transition-all text-sm";
       
       document.getElementById('btn-' + tabId).className = "pb-4 px-2 tab-active transition-all text-sm";
 
       if(tabId === 'tab-trends' && document.getElementById('trendsContainer').innerHTML === '') loadTrends();
-      if(tabId === 'tab-topwords' && document.getElementById('wordcloud-chart').innerHTML === '') loadTopWords();
       if(tabId === 'tab-archive' && document.getElementById('archiveContainer').innerHTML === '') loadArchive();
     }
-// 🛑 WIDZZONE API CONNECTOR (VERCEL TO GOOGLE) 🛑
-    // GANTI TAUTAN DI BAWAH DENGAN URL WEB APP GOOGLE APPS SCRIPT ANDA!
-    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbxndY-ziPHMnid16939BjFzjbuDN3tqON5r3Ugm7oQuXuyYDTFZP261amlDq6Lm8nYB/exec";
 
-    async function callGoogleAPI(action, payload = {}) {
-        payload.action = action;
-        try {
-            // Menggunakan method POST dan text/plain untuk membypass sekuriti CORS browser
-            const response = await fetch(GAS_API_URL, {
-                method: "POST",
-                headers: { "Content-Type": "text/plain;charset=utf-8" },
-                body: JSON.stringify(payload)
-            });
-            const json = await response.json();
-            if (json.status === "error") throw new Error(json.message);
-            return json.data;
-        } catch (error) {
-            throw error;
-        }
-    }
     // --- ARCHIVE LOGIC (BARU) ---
-    async function loadArchive() {
+    function loadArchive() {
       const loader = document.getElementById('loaderArchive');
       const container = document.getElementById('archiveContainer');
-      container.innerHTML = ''; loader.classList.replace('hidden', 'flex');
       
-      try {
-        const data = await callGoogleAPI("getArchivedData");
+      container.innerHTML = ''; 
+      loader.classList.replace('hidden', 'flex');
+      
+      google.script.run
+      .withSuccessHandler((data) => {
         loader.classList.replace('flex', 'hidden');
         if (data.length === 0) { 
-            container.innerHTML = '<div class="col-span-full text-center py-20 text-slate-400 font-semibold">Database kosong.</div>'; return; 
+            container.innerHTML = '<div class="col-span-full text-center py-20 text-slate-400 font-semibold">Database kosong. Mulai analisis untuk mengisi arsip.</div>'; 
+            return; 
         }
+        
         data.forEach(item => {
           let sColor = item.sentimen === "Positif" ? "emerald" : (item.sentimen === "Negatif" ? "rose" : "slate");
           container.innerHTML += `
@@ -264,10 +235,8 @@
               </div>
             </div>`;
         });
-      } catch (err) {
-        loader.classList.replace('flex', 'hidden');
-        alert("Gagal memuat arsip: " + err.message);
-      }
+      })
+      .getArchivedData();
     }
 
     function filterArchive() {
@@ -288,54 +257,21 @@
        startScraping(); 
     }
 
-    async function loadTopWords() {
-      const loader = document.getElementById('loaderWords');
-      const container = document.getElementById('wordcloud-container');
-      const btn = document.getElementById('btnRefreshWords');
-      container.classList.add('hidden'); loader.classList.replace('hidden', 'flex');
-      btn.disabled = true; btn.innerText = 'Menambang...';
-
-      try {
-        const wordsData = await callGoogleAPI("getTopWords");
-        loader.classList.replace('flex', 'hidden');
-        container.classList.remove('hidden');
-        btn.disabled = false; btn.innerText = '🔄 Ekstrak Ulang';
-        renderWordCloud(wordsData);
-      } catch (err) {
-        loader.classList.replace('flex', 'hidden');
-        btn.disabled = false; btn.innerText = '🔄 Coba Lagi';
-        alert("Gagal menambang kata: " + err.message);
-      }
-    }
-
-    function renderWordCloud(wordsData) {
-       let chartConfig = {
-          type: 'wordcloud',
-          options: {
-             words: wordsData, minLength: 4, ignore: [""],
-             style: {
-                fontFamily: 'Plus Jakarta Sans',
-                hoverState: { backgroundColor: '#f1f5f9', fontColor: '#0f172a', borderRadius: 6, padding: '6px' },
-                tooltip: { text: 'Terdeteksi "%text" sebanyak %hits kali', visible: true, alpha: 0.95, backgroundColor: '#0f172a', borderRadius: 8, padding: '10px' }
-             }
-          }
-       };
-       zingchart.render({ id: 'wordcloud-chart', data: chartConfig, height: '100%', width: '100%' });
-       zingchart.bind('wordcloud-chart', 'node_click', function(p) { analyzeTrend(p.text); });
-    }
-
-    async function loadTrends() {
+    function loadTrends() {
       const container = document.getElementById('trendsContainer');
       const loader = document.getElementById('loaderTrends');
       const btn = document.getElementById('btnRefreshTrends');
-      container.innerHTML = ''; loader.classList.replace('hidden', 'flex');
+      
+      container.innerHTML = '';
+      loader.classList.replace('hidden', 'flex');
       btn.disabled = true; btn.innerText = 'Memuat...';
 
-      try {
-        const data = await callGoogleAPI("fetchGoogleTrends");
-        loader.classList.replace('flex', 'hidden');
-        btn.disabled = false; btn.innerText = '🔄 Segarkan Radar';
-        if(data && data.length > 0) {
+      google.script.run
+        .withSuccessHandler((data) => {
+          loader.classList.replace('flex', 'hidden');
+          btn.disabled = false; btn.innerText = '🔄 Segarkan Radar';
+          
+          if(data && data.length > 0) {
              data.forEach((trend, index) => {
                  let rankBadge = index === 0 ? 'bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-md' : 'bg-slate-100 text-slate-500 border border-slate-200';
                  container.innerHTML += `
@@ -357,12 +293,14 @@
                     </button>
                   </div>`;
              });
-        }
-      } catch (err) {
-        loader.classList.replace('flex', 'hidden');
-        btn.disabled = false; btn.innerText = '🔄 Coba Lagi';
-        alert("Gagal memuat tren: " + err.message);
-      }
+          }
+        })
+        .withFailureHandler((err) => {
+          alert("Gagal memuat tren: " + err);
+          loader.classList.replace('flex', 'hidden');
+          btn.disabled = false; btn.innerText = '🔄 Coba Lagi';
+        })
+        .fetchGoogleTrends();
     }
 
     function clearDashboard() {
@@ -378,7 +316,7 @@
         return `${parts[2]} ${bulan[parseInt(parts[1])-1]} ${parts[0]}`;
     }
 
-    async function pingTotal() {
+    function pingTotal() {
         const keyword = document.getElementById('keyword').value;
         const source = document.getElementById('newsSource').value;
         const startDate = document.getElementById('startDate').value;
@@ -390,21 +328,23 @@
         document.getElementById('loadingText').innerText = `Radar mengintip total data di server ${sourceName}...`;
         document.getElementById('loader').classList.replace('hidden', 'flex');
 
-        try {
-            const data = await callGoogleAPI("checkTotalNews", { keyword, source, startDate, endDate });
+        google.script.run
+        .withSuccessHandler((data) => {
             document.getElementById('loader').classList.replace('flex', 'hidden');
             const badge = document.getElementById('summaryBadge');
             const summaryText = document.getElementById('summaryText');
 
             summaryText.innerHTML = `Radar Pengintai menemukan <span class="font-extrabold text-indigo-600 mx-1 bg-indigo-100 px-2 py-0.5 rounded-lg">${data.total}</span> terkait "<span class="font-bold">${keyword}</span>" di portal ${sourceName}. <br><span class="text-xs text-indigo-400 font-bold mt-2 block tracking-wide">💡 Silakan isi angka HAL (Kedalaman) dan klik "Mulai Ekstraksi AI" untuk menyedot sentimennya.</span>`;
             badge.classList.remove('hidden');
-        } catch (err) {
+        })
+        .withFailureHandler((err) => {
             document.getElementById('loader').classList.replace('flex', 'hidden');
-            alert("Gagal memindai: " + err.message);
-        }
+            alert("Gagal memindai: " + err);
+        })
+        .checkTotalNews(keyword, source, startDate, endDate);
     }
 
-    async function startScraping() {
+    function startScraping() {
       const keyword = document.getElementById('keyword').value;
       const pages = document.getElementById('pages').value;
       const source = document.getElementById('newsSource').value;
@@ -419,28 +359,31 @@
       document.getElementById('loader').classList.replace('hidden', 'flex');
       btn.disabled = true; btn.innerHTML = 'Memproses...'; btn.classList.add('opacity-75');
 
-      try {
-        const data = await callGoogleAPI("fetchNews", { keyword, pages, source, startDate, endDate });
-        document.getElementById('loader').classList.replace('flex', 'hidden');
-        btn.disabled = false; btn.innerHTML = '⚡ Mulai Ekstraksi AI'; btn.classList.remove('opacity-75');
-        
-        if(data && data.length > 0) { 
-            displayResults(data); 
-            updateSummaryBadge(keyword, startDate, endDate); 
-        } else {
-            document.getElementById('tableContainer').classList.remove('hidden');
-            document.getElementById('resultsTable').innerHTML += `
-              <tr class="bg-slate-50/50">
-                <td colspan="2" class="py-10 text-center text-slate-500 font-semibold text-sm">
-                  ⚠️ Tidak ada data yang sesuai dengan rentang waktu Anda di ${sourceName} (Kedalaman ${pages} Halaman). <br>Coba naikkan angka HAL untuk mencari lebih dalam.
-                </td>
-              </tr>`;
-        }
-      } catch (err) {
-        document.getElementById('loader').classList.replace('flex', 'hidden');
-        btn.disabled = false; btn.innerHTML = 'Coba Lagi'; btn.classList.remove('opacity-75');
-        alert("Terjadi kesalahan sistem: " + err.message);
-      }
+      google.script.run
+        .withSuccessHandler((data) => {
+          document.getElementById('loader').classList.replace('flex', 'hidden');
+          btn.disabled = false; btn.innerHTML = '⚡ Mulai Ekstraksi AI'; btn.classList.remove('opacity-75');
+          
+          if(data && data.length > 0) { 
+              displayResults(data); 
+              updateSummaryBadge(keyword, startDate, endDate); 
+          } 
+          else {
+              document.getElementById('tableContainer').classList.remove('hidden');
+              document.getElementById('resultsTable').innerHTML += `
+                <tr class="bg-slate-50/50">
+                  <td colspan="2" class="py-10 text-center text-slate-500 font-semibold text-sm">
+                    ⚠️ Tidak ada data yang sesuai dengan rentang waktu Anda di ${sourceName} (Kedalaman ${pages} Halaman). <br>Coba naikkan angka HAL untuk mencari lebih dalam.
+                  </td>
+                </tr>`;
+          }
+        })
+        .withFailureHandler((err) => { 
+          alert("Terjadi kesalahan sistem: " + err); 
+          document.getElementById('loader').classList.replace('flex', 'hidden');
+          btn.disabled = false; btn.innerHTML = 'Coba Lagi'; btn.classList.remove('opacity-75');
+        })
+        .fetchNews(keyword, pages, source, startDate, endDate); 
     }
 
     function updateSummaryBadge(keyword, startDate, endDate) {
@@ -480,7 +423,7 @@
                 </div>
                 <h3 class="text-lg font-extrabold text-slate-900 leading-snug group-hover:text-violet-700 transition-colors">${news.title}</h3>
                 <div class="bg-slate-50/80 border-l-4 border-${badgeColor}-400 p-4 rounded-r-xl mt-1 shadow-inner">
-                  <p class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1.5 flex items-center gap-1">🧠 Kesimpulan AI Gemini 2.5</p>
+                  <p class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1.5 flex items-center gap-1">Analisis Sentimen</p>
                   <p class="text-sm text-slate-700 font-medium leading-relaxed">"${news.sentiment.reason}"</p>
                 </div>
                 <a href="${news.link}" target="_blank" class="text-xs text-violet-600 font-extrabold hover:text-violet-800 transition-colors mt-2 w-max flex items-center gap-1">Baca Jurnal Asli <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd" /></svg></a>
