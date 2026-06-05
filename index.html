@@ -147,16 +147,6 @@
       <div id="trendsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
     </div>
 
-      <div id="loaderWords" class="hidden flex-col items-center justify-center py-32 bg-white rounded-[2rem] shadow-sm border border-slate-200">
-        <div class="loader rounded-full border-4 border-slate-200 h-12 w-12 mb-4"></div>
-        <p class="text-sm text-slate-500 font-bold animate-pulse">Menambang miliaran teks untuk visualisasi NLP...</p>
-      </div>
-
-      <div id="wordcloud-container" class="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-200 hidden h-[600px]">
-         <div id="wordcloud-chart" class="w-full h-full"></div>
-      </div>
-    </div>
-
     <div id="tab-archive" class="hidden">
       <div class="bg-white p-6 lg:p-8 rounded-[2rem] shadow-sm border border-slate-200 mb-8 flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
         <div class="absolute top-0 left-0 w-64 h-64 bg-violet-50 rounded-full blur-3xl -z-10 -translate-y-1/2 -translate-x-1/3"></div>
@@ -199,23 +189,38 @@
       if(tabId === 'tab-trends' && document.getElementById('trendsContainer').innerHTML === '') loadTrends();
       if(tabId === 'tab-archive' && document.getElementById('archiveContainer').innerHTML === '') loadArchive();
     }
+// 🛑 WIDZZONE API CONNECTOR (VERCEL TO GOOGLE) 🛑
+    // GANTI TAUTAN DI BAWAH DENGAN URL WEB APP GOOGLE APPS SCRIPT ANDA!
+    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbzRBYr2lpN1yi8cDot72qgl8mfvjIGfxysOhXlZWOaFsfy8VCn3dwotc8i95t08C1yY/exec";
 
+    async function callGoogleAPI(action, payload = {}) {
+        payload.action = action;
+        try {
+            // Menggunakan method POST dan text/plain untuk membypass sekuriti CORS browser
+            const response = await fetch(GAS_API_URL, {
+                method: "POST",
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify(payload)
+            });
+            const json = await response.json();
+            if (json.status === "error") throw new Error(json.message);
+            return json.data;
+        } catch (error) {
+            throw error;
+        }
+    }
     // --- ARCHIVE LOGIC (BARU) ---
-    function loadArchive() {
+    async function loadArchive() {
       const loader = document.getElementById('loaderArchive');
       const container = document.getElementById('archiveContainer');
+      container.innerHTML = ''; loader.classList.replace('hidden', 'flex');
       
-      container.innerHTML = ''; 
-      loader.classList.replace('hidden', 'flex');
-      
-      google.script.run
-      .withSuccessHandler((data) => {
+      try {
+        const data = await callGoogleAPI("getArchivedData");
         loader.classList.replace('flex', 'hidden');
         if (data.length === 0) { 
-            container.innerHTML = '<div class="col-span-full text-center py-20 text-slate-400 font-semibold">Database kosong. Mulai analisis untuk mengisi arsip.</div>'; 
-            return; 
+            container.innerHTML = '<div class="col-span-full text-center py-20 text-slate-400 font-semibold">Database kosong.</div>'; return; 
         }
-        
         data.forEach(item => {
           let sColor = item.sentimen === "Positif" ? "emerald" : (item.sentimen === "Negatif" ? "rose" : "slate");
           container.innerHTML += `
@@ -235,8 +240,10 @@
               </div>
             </div>`;
         });
-      })
-      .getArchivedData();
+      } catch (err) {
+        loader.classList.replace('flex', 'hidden');
+        alert("Gagal memuat arsip: " + err.message);
+      }
     }
 
     function filterArchive() {
@@ -257,21 +264,18 @@
        startScraping(); 
     }
 
-    function loadTrends() {
+    async function loadTrends() {
       const container = document.getElementById('trendsContainer');
       const loader = document.getElementById('loaderTrends');
       const btn = document.getElementById('btnRefreshTrends');
-      
-      container.innerHTML = '';
-      loader.classList.replace('hidden', 'flex');
+      container.innerHTML = ''; loader.classList.replace('hidden', 'flex');
       btn.disabled = true; btn.innerText = 'Memuat...';
 
-      google.script.run
-        .withSuccessHandler((data) => {
-          loader.classList.replace('flex', 'hidden');
-          btn.disabled = false; btn.innerText = '🔄 Segarkan Radar';
-          
-          if(data && data.length > 0) {
+      try {
+        const data = await callGoogleAPI("fetchGoogleTrends");
+        loader.classList.replace('flex', 'hidden');
+        btn.disabled = false; btn.innerText = '🔄 Segarkan Radar';
+        if(data && data.length > 0) {
              data.forEach((trend, index) => {
                  let rankBadge = index === 0 ? 'bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-md' : 'bg-slate-100 text-slate-500 border border-slate-200';
                  container.innerHTML += `
@@ -289,18 +293,16 @@
                       </div>
                     </div>
                     <button onclick="analyzeTrend('${trend.keyword.replace(/'/g, "\\'")}')" class="mt-auto w-full bg-slate-50 hover:bg-slate-900 text-slate-700 hover:text-white border border-slate-200 text-sm font-bold py-3.5 rounded-xl transition-all shadow-sm">
-                      ⚡ Ekstrak Sentimen AI
+                      ⚡ Ekstrak Berita + Sentimen
                     </button>
                   </div>`;
              });
-          }
-        })
-        .withFailureHandler((err) => {
-          alert("Gagal memuat tren: " + err);
-          loader.classList.replace('flex', 'hidden');
-          btn.disabled = false; btn.innerText = '🔄 Coba Lagi';
-        })
-        .fetchGoogleTrends();
+        }
+      } catch (err) {
+        loader.classList.replace('flex', 'hidden');
+        btn.disabled = false; btn.innerText = '🔄 Coba Lagi';
+        alert("Gagal memuat tren: " + err.message);
+      }
     }
 
     function clearDashboard() {
@@ -316,7 +318,7 @@
         return `${parts[2]} ${bulan[parseInt(parts[1])-1]} ${parts[0]}`;
     }
 
-    function pingTotal() {
+    async function pingTotal() {
         const keyword = document.getElementById('keyword').value;
         const source = document.getElementById('newsSource').value;
         const startDate = document.getElementById('startDate').value;
@@ -328,23 +330,21 @@
         document.getElementById('loadingText').innerText = `Radar mengintip total data di server ${sourceName}...`;
         document.getElementById('loader').classList.replace('hidden', 'flex');
 
-        google.script.run
-        .withSuccessHandler((data) => {
+        try {
+            const data = await callGoogleAPI("checkTotalNews", { keyword, source, startDate, endDate });
             document.getElementById('loader').classList.replace('flex', 'hidden');
             const badge = document.getElementById('summaryBadge');
             const summaryText = document.getElementById('summaryText');
 
             summaryText.innerHTML = `Radar Pengintai menemukan <span class="font-extrabold text-indigo-600 mx-1 bg-indigo-100 px-2 py-0.5 rounded-lg">${data.total}</span> terkait "<span class="font-bold">${keyword}</span>" di portal ${sourceName}. <br><span class="text-xs text-indigo-400 font-bold mt-2 block tracking-wide">💡 Silakan isi angka HAL (Kedalaman) dan klik "Mulai Ekstraksi AI" untuk menyedot sentimennya.</span>`;
             badge.classList.remove('hidden');
-        })
-        .withFailureHandler((err) => {
+        } catch (err) {
             document.getElementById('loader').classList.replace('flex', 'hidden');
-            alert("Gagal memindai: " + err);
-        })
-        .checkTotalNews(keyword, source, startDate, endDate);
+            alert("Gagal memindai: " + err.message);
+        }
     }
 
-    function startScraping() {
+    async function startScraping() {
       const keyword = document.getElementById('keyword').value;
       const pages = document.getElementById('pages').value;
       const source = document.getElementById('newsSource').value;
@@ -359,31 +359,28 @@
       document.getElementById('loader').classList.replace('hidden', 'flex');
       btn.disabled = true; btn.innerHTML = 'Memproses...'; btn.classList.add('opacity-75');
 
-      google.script.run
-        .withSuccessHandler((data) => {
-          document.getElementById('loader').classList.replace('flex', 'hidden');
-          btn.disabled = false; btn.innerHTML = '⚡ Mulai Ekstraksi AI'; btn.classList.remove('opacity-75');
-          
-          if(data && data.length > 0) { 
-              displayResults(data); 
-              updateSummaryBadge(keyword, startDate, endDate); 
-          } 
-          else {
-              document.getElementById('tableContainer').classList.remove('hidden');
-              document.getElementById('resultsTable').innerHTML += `
-                <tr class="bg-slate-50/50">
-                  <td colspan="2" class="py-10 text-center text-slate-500 font-semibold text-sm">
-                    ⚠️ Tidak ada data yang sesuai dengan rentang waktu Anda di ${sourceName} (Kedalaman ${pages} Halaman). <br>Coba naikkan angka HAL untuk mencari lebih dalam.
-                  </td>
-                </tr>`;
-          }
-        })
-        .withFailureHandler((err) => { 
-          alert("Terjadi kesalahan sistem: " + err); 
-          document.getElementById('loader').classList.replace('flex', 'hidden');
-          btn.disabled = false; btn.innerHTML = 'Coba Lagi'; btn.classList.remove('opacity-75');
-        })
-        .fetchNews(keyword, pages, source, startDate, endDate); 
+      try {
+        const data = await callGoogleAPI("fetchNews", { keyword, pages, source, startDate, endDate });
+        document.getElementById('loader').classList.replace('flex', 'hidden');
+        btn.disabled = false; btn.innerHTML = '⚡ Mulai Ekstraksi AI'; btn.classList.remove('opacity-75');
+        
+        if(data && data.length > 0) { 
+            displayResults(data); 
+            updateSummaryBadge(keyword, startDate, endDate); 
+        } else {
+            document.getElementById('tableContainer').classList.remove('hidden');
+            document.getElementById('resultsTable').innerHTML += `
+              <tr class="bg-slate-50/50">
+                <td colspan="2" class="py-10 text-center text-slate-500 font-semibold text-sm">
+                  ⚠️ Tidak ada data yang sesuai dengan rentang waktu Anda di ${sourceName} (Kedalaman ${pages} Halaman). <br>Coba naikkan angka HAL untuk mencari lebih dalam.
+                </td>
+              </tr>`;
+        }
+      } catch (err) {
+        document.getElementById('loader').classList.replace('flex', 'hidden');
+        btn.disabled = false; btn.innerHTML = 'Coba Lagi'; btn.classList.remove('opacity-75');
+        alert("Terjadi kesalahan sistem: " + err.message);
+      }
     }
 
     function updateSummaryBadge(keyword, startDate, endDate) {
@@ -423,7 +420,7 @@
                 </div>
                 <h3 class="text-lg font-extrabold text-slate-900 leading-snug group-hover:text-violet-700 transition-colors">${news.title}</h3>
                 <div class="bg-slate-50/80 border-l-4 border-${badgeColor}-400 p-4 rounded-r-xl mt-1 shadow-inner">
-                  <p class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1.5 flex items-center gap-1">Analisis Sentimen</p>
+                  <p class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1.5 flex items-center gap-1">🧠 Kesimpulan AI Gemini 2.5</p>
                   <p class="text-sm text-slate-700 font-medium leading-relaxed">"${news.sentiment.reason}"</p>
                 </div>
                 <a href="${news.link}" target="_blank" class="text-xs text-violet-600 font-extrabold hover:text-violet-800 transition-colors mt-2 w-max flex items-center gap-1">Baca Jurnal Asli <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd" /></svg></a>
